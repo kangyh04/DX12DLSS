@@ -21,11 +21,13 @@ Donut 공통 셰이더 빌드:
 PowerShell
 
 & "D:\Studying\Streamline_Sample\_bin\ShaderMake.exe" --config "D:/Studying/Streamline_Sample/donut/shaders/DonutShaders.cfg" --out "D:/Studying/Streamline_Sample/_bin/shaders/donut/dxil" --platform DXIL --binaryBlob --outputExt .bin -I "D:/Studying/Streamline_Sample/donut/include" --compiler "$dxc_dir\dxc.exe" --shaderModel 6_5 --useAPI
+
 Sample 전용 셰이더 빌드:
 
 PowerShell
 
 & "D:\Studying\Streamline_Sample\_bin\ShaderMake.exe" --config "D:/Studying/Streamline_Sample/src/shaders.cfg" --out "D:/Studying/Streamline_Sample/_bin/shaders/StreamlineSample/dxil" --platform DXIL --binaryBlob --outputExt .bin -I "D:/Studying/Streamline_Sample/donut/include" -D TARGET_D3D12 --compiler "$dxc_dir\dxc.exe" --shaderModel 6_5 --useAPI
+
 3. 해결 단계 2: Visual Studio 빌드 예외 설정
 수동으로 만든 셰이더를 사용하도록 하고, 에러 나는 프로젝트는 빌드에서 제외합니다.
 
