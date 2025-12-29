@@ -8,6 +8,9 @@ struct SLOptions
 	bool allowSMSCG = false;
 };
 
+static constexpr int AppID = 0x44332211;
+static constexpr uint64_t SDK_VERSION = sl::kSDKVersion;
+
 class NVWrapper
 {
 public:
