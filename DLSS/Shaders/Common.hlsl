@@ -24,9 +24,7 @@ struct MaterialData
     uint MatPad2;
 };
 
-TextureCube gCubeMap : register(t0);
-
-Texture2D gDiffuseMap[4] : register(t1);
+Texture2D gDiffuseMap[1] : register(t0);
 
 StructuredBuffer<MaterialData> gMaterialData : register(t0, space1);
 
@@ -56,7 +54,7 @@ cbuffer cbPass : register(b1)
     float4x4 gViewProj;
     float4x4 gInvViewProj;
     float3 gEyePosW;
-    float gSkyTime;
+    float pad0;
     float2 gRenderTargetSize;
     float2 gInvRenderTargetSize;
     float gNearZ;

@@ -11,7 +11,6 @@
 #endif
 
 #include "Common.hlsl"
-#include "SkyColor.hlsl"
 
 struct VertexIn
 {
@@ -57,11 +56,9 @@ float4 PS(VertexOut pin) : SV_Target
     
     float3 toEyeW = normalize(gEyePosW - pin.PosW);
 
-    float4 skyColor = float4(CalcSkyColor(gSkyTime, -toEyeW.y), 1);
     diffuseAlbedo *= gDiffuseMap[diffuseTexIndex].Sample(gsamAnisotropicWrap, pin.TexC);
 
     pin.NormalW = normalize(pin.NormalW);
-    
 
     float4 ambient = gAmbientLight * diffuseAlbedo;
 
@@ -71,12 +68,11 @@ float4 PS(VertexOut pin) : SV_Target
     float4 directLight = ComputeLighting(gLights, mat, pin.PosW,
     pin.NormalW, toEyeW, shadowFactor);
     
-    float4 litColor = ambient + directLight * skyColor;
+    float4 litColor = ambient + directLight;
     
     float3 r = reflect(-toEyeW, pin.NormalW);
-    float4 reflectionColor = gCubeMap.Sample(gsamLinearWrap, r);
     float3 fresnelFactor = SchlickFresnel(fresnelR0, pin.NormalW, r);
-    litColor.rgb += shininess * fresnelFactor * reflectionColor.rgb;
+    litColor.rgb += shininess * fresnelFactor;
 
     litColor.a = diffuseAlbedo.a;
     

@@ -82,7 +82,7 @@ void DLSSApp::LoadTextures()
 
 	vector<wstring> texFilenames =
 	{
-		L"../../Textures/white1x1.dds",
+		L"../Textures/white1x1.dds",
 	};
 
 	for (int i = 0; i < texNames.size(); ++i)

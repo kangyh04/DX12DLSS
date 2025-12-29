@@ -56,20 +56,11 @@ void BaseApp::OnResize()
 	D3DApp::OnResize();
 
 	mCamera.SetLens(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
-
-	// mFrustumCulling.UpdateCameraFrustum(mCamera);
 }
 
 void BaseApp::Update(const Timer& gt)
 {
 	OnKeyboardInput(gt);
-
-	XMMATRIX skullScale = XMMatrixScaling(0.2f, 0.2f, 0.2f);
-	XMMATRIX skullOffset = XMMatrixTranslation(3.0f, 2.0f, 0.0f);
-	XMMATRIX skullLocalRotate = XMMatrixRotationY(2.0f * gt.GetTotalTime());
-	XMMATRIX skullGlobalRotate = XMMatrixRotationY(0.5f * gt.GetTotalTime());
-	XMStoreFloat4x4(&mSkullRitem->World, skullScale * skullLocalRotate * skullOffset * skullGlobalRotate);
-	mSkullRitem->NumFramesDirty = gNumFrameResources;
 
 	mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % gNumFrameResources;
 	mCurrFrameResource = mFrameResources[mCurrFrameResourceIndex].get();
@@ -90,46 +81,21 @@ void BaseApp::Update(const Timer& gt)
 
 void BaseApp::Draw(const Timer& gt)
 {
-	// 	string psoSuffix = mWireFrameMode ? "_wireframe" : "";
-	// 
 	auto cmdListAlloc = mCurrFrameResource->CmdListAlloc;
 
 	ThrowIfFailed(cmdListAlloc->Reset());
 
 	ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mPSOs["opaque"].Get()));
 
-	// mCommandList->RSSetViewports(1, &mScreenViewport);
-	// mCommandList->RSSetScissorRects(1, &mScissorRect);
-
-	// auto toRenderTarget = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
-		// D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-	// mCommandList->ResourceBarrier(1, &toRenderTarget);
-
-	// mCommandList->ClearRenderTargetView(CurrentBackBufferView(), Colors::LightSteelBlue, 0, nullptr);
-	// mCommandList->ClearDepthStencilView(DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-	// auto currentBackBufferView = CurrentBackBufferView();
-	// auto depthStencilView = DepthStencilView();
-	// mCommandList->OMSetRenderTargets(1, &currentBackBufferView, true, &depthStencilView);
-
 	ID3D12DescriptorHeap* descriptorheaps[] = { mSrvDescriptorHeap.Get() };
 	mCommandList->SetDescriptorHeaps(_countof(descriptorheaps), descriptorheaps);
 
 	mCommandList->SetGraphicsRootSignature(mRootSignature.Get());
 
-	// auto passCB = mCurrFrameResource->PassCB->Resource();
-	// mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
-
 	auto matBuffer = mCurrFrameResource->MaterialBuffer->Resource();
 	mCommandList->SetGraphicsRootShaderResourceView(2, matBuffer->GetGPUVirtualAddress());
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE skyTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-	skyTexDescriptor.Offset(3, mCbvSrvDescriptorSize);
-	mCommandList->SetGraphicsRootDescriptorTable(3, skyTexDescriptor);
-
-	mCommandList->SetGraphicsRootDescriptorTable(4, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-
-	DrawSceneToCubeMap();
+	mCommandList->SetGraphicsRootDescriptorTable(3, mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 
 	mCommandList->RSSetViewports(1, &mScreenViewport);
 	mCommandList->RSSetScissorRects(1, &mScissorRect);
@@ -149,20 +115,7 @@ void BaseApp::Draw(const Timer& gt)
 	auto passCB = mCurrFrameResource->PassCB->Resource();
 	mCommandList->SetGraphicsRootConstantBufferView(1, passCB->GetGPUVirtualAddress());
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE dynamicTexDescriptor(mSrvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-	dynamicTexDescriptor.Offset(4, mCbvSrvDescriptorSize);
-	mCommandList->SetGraphicsRootDescriptorTable(3, dynamicTexDescriptor);
-
-	//  #pragma region RenderItems
-	DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::OpaqueDynamicReflectors]);
-
-	mCommandList->SetGraphicsRootDescriptorTable(3, skyTexDescriptor);
-
 	DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
-
-	mCommandList->SetPipelineState(mPSOs["sky"].Get());
-	DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Sky]);
-	//  #pragma endregion
 
 	auto toPresent = CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
 		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
@@ -312,9 +265,6 @@ void BaseApp::UpdateMainPassCB(const Timer& gt)
 	mMainPassCB.TotalTime = gt.GetTotalTime();
 	mMainPassCB.DeltaTime = gt.GetDeltaTime();
 	mMainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
-	float intpart;
-	mMainPassCB.SkyTime = modf(gt.GetTotalTime() * skyTimeSpeed, &intpart);
-	cout << "SkyTime: " << mMainPassCB.SkyTime << endl;
 	mMainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
 	mMainPassCB.Lights[0].Strength = { 0.8f, 0.8f, 0.8f };
 	mMainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
@@ -324,41 +274,6 @@ void BaseApp::UpdateMainPassCB(const Timer& gt)
 
 	auto currPassCB = mCurrFrameResource->PassCB.get();
 	currPassCB->CopyData(0, mMainPassCB);
-
-	UpdateCubeMapFacePassCBs();
-}
-
-void BaseApp::UpdateCubeMapFacePassCBs()
-{
-	for (int i = 0; i < 6; ++i)
-	{
-		PassConstants cubeFacePassCB = mMainPassCB;
-
-		XMMATRIX view = mCubeMapCameras[i].GetView();
-		XMMATRIX proj = mCubeMapCameras[i].GetProj();
-
-		XMMATRIX viewProj = XMMatrixMultiply(view, proj);
-		auto detView = XMMatrixDeterminant(view);
-		auto detProj = XMMatrixDeterminant(proj);
-		XMMATRIX invView = XMMatrixInverse(&detView, view);
-		XMMATRIX invProj = XMMatrixInverse(&detProj, proj);
-		auto detViewProj = XMMatrixDeterminant(viewProj);
-		XMMATRIX invViewProj = XMMatrixInverse(&detViewProj, viewProj);
-
-		XMStoreFloat4x4(&cubeFacePassCB.View, XMMatrixTranspose(view));
-		XMStoreFloat4x4(&cubeFacePassCB.InvView, XMMatrixTranspose(invView));
-		XMStoreFloat4x4(&cubeFacePassCB.Proj, XMMatrixTranspose(proj));
-		XMStoreFloat4x4(&cubeFacePassCB.InvProj, XMMatrixTranspose(invProj));
-		XMStoreFloat4x4(&cubeFacePassCB.ViewProj, XMMatrixTranspose(viewProj));
-		XMStoreFloat4x4(&cubeFacePassCB.InvViewProj, XMMatrixTranspose(invViewProj));
-		cubeFacePassCB.EyePosW = mCubeMapCameras[i].GetPosition3f();
-		cubeFacePassCB.RenderTargetSize = XMFLOAT2((float)CubeMapSize, (float)CubeMapSize);
-		cubeFacePassCB.InvRenderTargetSize = XMFLOAT2(1.0f / CubeMapSize, 1.0f / CubeMapSize);
-
-		auto currPassCB = mCurrFrameResource->PassCB.get();
-
-		currPassCB->CopyData(1 + i, cubeFacePassCB);
-	}
 }
 
 void BaseApp::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const vector<RenderItem*>& ritems)
@@ -411,48 +326,4 @@ void BaseApp::EnableD3D12DebugLayer()
 			debugController1->SetEnableGPUBasedValidation(true);
 		}
 	}
-}
-
-void BaseApp::DrawSceneToCubeMap()
-{
-	auto viewport = mDynamicCubeMap->Viewport();
-	auto scissorRect = mDynamicCubeMap->ScissorRect();
-	mCommandList->RSSetViewports(1, &viewport);
-	mCommandList->RSSetScissorRects(1, &scissorRect);
-
-	auto toRenderTarget = CD3DX12_RESOURCE_BARRIER::Transition(mDynamicCubeMap->Resource(),
-		D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-	mCommandList->ResourceBarrier(1, &toRenderTarget);
-
-	UINT passCBByteSize = D3DUtil::CalcConstantBufferByteSize(sizeof(PassConstants));
-
-	for (int i = 0; i < 6; ++i)
-	{
-		auto rtv = mDynamicCubeMap->Rtv(i);
-
-		// mCommandList->ClearRenderTargetView(mDynamicCubeMap->Rtv(i), Colors::LightSteelBlue, 0, nullptr);
-		mCommandList->ClearRenderTargetView(rtv, Colors::LightSteelBlue, 0, nullptr);
-		mCommandList->ClearDepthStencilView(mCubeDsv, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-		mCommandList->OMSetRenderTargets(1, &rtv, true, &mCubeDsv);
-
-		auto passCB = mCurrFrameResource->PassCB->Resource();
-		D3D12_GPU_VIRTUAL_ADDRESS passCBAddress = passCB->GetGPUVirtualAddress() + (1 + i) * passCBByteSize;
-
-		mCommandList->SetGraphicsRootConstantBufferView(1, passCBAddress);
-
-		DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
-
-		mCommandList->SetPipelineState(mPSOs["sky"].Get());
-
-		DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Sky]);
-
-		mCommandList->SetPipelineState(mPSOs["opaque"].Get());
-	}
-
-	auto toGenericRead = CD3DX12_RESOURCE_BARRIER::Transition(mDynamicCubeMap->Resource(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_GENERIC_READ);
-
-	mCommandList->ResourceBarrier(1, &toGenericRead);
 }

@@ -35,7 +35,6 @@ public:
 	void UpdateInstanceBuffer(const Timer& gt);
 	void UpdateMaterialBuffer(const Timer& gt);
 	void UpdateMainPassCB(const Timer& gt);
-	void UpdateCubeMapFacePassCBs();
 
 	void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const vector<RenderItem*>& ritems);
 
@@ -45,7 +44,6 @@ public:
 
 protected:
 	virtual void Build() {}
-	void DrawSceneToCubeMap();
 
 protected:
 	bool mWireFrameMode = false;
@@ -83,16 +81,6 @@ protected:
 
 	Camera mCamera;
 
-	FrustumCulling mFrustumCulling;
-
 	POINT mLastMousePos;
-
-	RenderItem* mSkullRitem = nullptr;
-
-	Camera mCubeMapCameras[6];
-	CD3DX12_CPU_DESCRIPTOR_HANDLE mCubeDsv;
-	unique_ptr<CubeRenderTarget> mDynamicCubeMap;
-
-	float skyTimeSpeed = 0.1;
 };
 
