@@ -2,6 +2,7 @@
 #include "streamline-sdk-v2.9.0/include/sl_core_types.h"
 #include "streamline-sdk-v2.9.0/include/sl_security.h"
 #include "streamline-sdk-v2.9.0/include/sl_core_api.h"
+#include "streamline-sdk-v2.9.0/include/sl_reflex.h"
 #include <debugapi.h>
 
 void LogMessageCallback(sl::LogType type, const char* msg)
@@ -101,3 +102,18 @@ bool NVWrapper::Initialize_preDevice()
 
 	return false;
 }
+
+bool NVWrapper::Initialize_postDevice()
+{
+	sl::ReflexOptions reflexConst{};
+	reflexConst.mode = sl::ReflexMode::eOff;
+	reflexConst.useMarkersToOptimize = false;
+	reflexConst.virtualKey = VK_F13;
+	reflexConst.frameLimitUs = 0;
+
+	SuccessCheck(slReflexSetOptions(reflexConst), "slReflexSetOptions");
+
+	return true;
+}
+
+
